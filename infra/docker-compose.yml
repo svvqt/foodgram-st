@@ -1,6 +1,25 @@
 version: '3.3'
 services:
+  db:
+    image: postgres:13.10
+    env_file: .env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
 
+  backend:
+    build: ./backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_NAME=foodgram_db
+      - DB_USER=foodgram_user
+      - DB_PASSWORD=foodgram_pass
   frontend:
     container_name: foodgram-front
     build: ../frontend
