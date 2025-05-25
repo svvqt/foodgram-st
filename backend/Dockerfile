@@ -10,6 +10,5 @@ COPY . /app
 
 WORKDIR /app
 
-RUN python manage.py collectstatic --noinput
-
-CMD ["gunicorn", "foodgram.wsgi:application", "--bind", "0:8000" ]
+# Не выполняем collectstatic здесь — он будет в CMD
+CMD ["sh", "-c", "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn foodgram.wsgi:application --bind 0:8000"]
