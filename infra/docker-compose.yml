@@ -1,36 +1,63 @@
-version: '3.3'
+version: '3.8'
+
 services:
   db:
-    image: postgres:13.10
-    env_file: .env
+    image: postgres:13.0-alpine
+    container_name: foodgram_db
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data/
+    env_file:
+      - ../.env  # Указываем путь к .env в корне проекта
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
-    build: ./backend
-    command: python manage.py runserver 0.0.0.0:8000
+    image: swwwqqt/foodgram-backend:latest  # Замените на ваш образ
+    container_name: foodgram_backend
+    restart: always
     volumes:
-      - ./backend:/app
-    ports:
-      - "8000:8000"
+      - static_volume:/app/static/
+      - media_volume:/app/media/
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    env_file:
+      - ../.env
     environment:
-      - DB_HOST=db
-      - DB_NAME=foodgram_db
-      - DB_USER=foodgram_user
-      - DB_PASSWORD=foodgram_pass
+      DB_HOST: db
+      DB_PORT: 5432
+
   frontend:
-    container_name: foodgram-front
-    build: ../frontend
+    image: swwwqqt/foodgram-frontend:latest  # Замените на ваш образ
+    container_name: foodgram_frontend
     volumes:
-      - ../frontend/:/app/result_build/
+      - ../frontend:/app
+    depends_on:
+      - backend
+
   nginx:
-    container_name: foodgram-proxy
     image: nginx:1.25.4-alpine
+    container_name: foodgram_nginx
     ports:
       - "80:80"
+      - "443:443"  # Для HTTPS при необходимости
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - static_volume:/var/html/static/
+      - media_volume:/var/html/media/
       - ../frontend/build:/usr/share/nginx/html/
-      - ../docs/:/usr/share/nginx/html/api/docs/
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  pg_data:
+  static_volume:
+  media_volume:
