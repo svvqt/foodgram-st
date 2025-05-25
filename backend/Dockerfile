@@ -10,4 +10,6 @@ COPY . /app
 
 WORKDIR /app
 
+RUN python manage.py collectstatic --noinput
+
 CMD ["gunicorn", "foodgram.wsgi:application", "--bind", "0:8000" ]
