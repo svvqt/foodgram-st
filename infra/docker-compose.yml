@@ -1,5 +1,10 @@
 version: '3.8'
 
+volumes:
+  pg_data:
+  static_volume:
+  media_volume:
+
 services:
   db:
     image: postgres:13.0-alpine
@@ -9,9 +14,9 @@ services:
     env_file:
       - ../.env  # Указываем путь к .env в корне проекта
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: foodgram_db
+      POSTGRES_USER: foodgram_user
+      POSTGRES_PASSWORD: foodgram_pass
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -19,7 +24,7 @@ services:
       retries: 5
 
   backend:
-    image: swwwqqt/foodgram-backend:latest  # Замените на ваш образ
+    image: swwwqqt/foodgram_backend:latest  # Замените на ваш образ
     container_name: foodgram_backend
     restart: always
     volumes:
@@ -35,7 +40,7 @@ services:
       DB_PORT: 5432
 
   frontend:
-    image: swwwqqt/foodgram-frontend:latest  # Замените на ваш образ
+    image: swwwqqt/foodgram_frontend:latest  # Замените на ваш образ
     container_name: foodgram_frontend
     volumes:
       - ../frontend:/app
@@ -56,8 +61,3 @@ services:
     depends_on:
       - backend
       - frontend
-
-volumes:
-  pg_data:
-  static_volume:
-  media_volume:
