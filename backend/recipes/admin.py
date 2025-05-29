@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django import forms
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.urls import path
 from django.http import HttpResponseRedirect
 from django.contrib import messages
@@ -107,8 +107,9 @@ class IngredientAdmin(admin.ModelAdmin):
     list_display = ('name', 'measurement_unit')
     list_filter = ('name',)
     search_fields = ('name',)
-    change_form_template = 'admin/ingredient_change_form.html'   # Кастомный шаблон
-    change_list_template = 'admin/ingredients_change_list.html'  # Кастомный шаблон
+    # кастомные шаблоны
+    change_form_template = 'admin/ingredient_change_form.html'
+    change_list_template = 'admin/ingredients_change_list.html'
     
     def get_urls(self):
         """Добавляем кастомный URL для загрузки JSON"""

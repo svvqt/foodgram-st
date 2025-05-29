@@ -7,6 +7,8 @@ from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
+
 
 from recipes.models import (Recipe, Ingredient,
                             Favorite, ShoppingCart, User)
@@ -116,3 +118,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return shopping_cart(self, request, author)
         return Response('Список покупок пуст.',
                         status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['get'], url_path='get-link')
+    def get_recipe_link(self, request, pk=None):
+        """Генерирует полную ссылку на рецепт."""
+        recipe = self.get_object()
+        absolute_url = request.build_absolute_uri(
+            reverse('recipes-detail', kwargs={'pk': recipe.id}))
+        return Response({'short-link': absolute_url})

@@ -1,12 +1,10 @@
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from django.core.files.base import ContentFile
+from drf_extra_fields.fields import Base64ImageField
 from recipes.models import Follow, Recipe
 from users.models import User
 import api.serializers
-import base64
-import uuid
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -87,8 +85,8 @@ class FollowSerializer(serializers.ModelSerializer):
 
 
 class UserAvatarSerializer(serializers.ModelSerializer):
-    avatar = serializers.ImageField(required=True)  # Принимаем файл изображения
-
+    avatar = Base64ImageField()
+    
     class Meta:
         model = User
         fields = ('avatar',)

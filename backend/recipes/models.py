@@ -54,7 +54,7 @@ class Recipe(models.Model):
         help_text='Укажите время приготовления рецепта в минутах')
     image = models.ImageField(
         verbose_name='Картинка рецепта',
-        upload_to='media/',
+        upload_to='recipes/',
         help_text='Добавьте изображение рецепта')
     pub_date = models.DateTimeField(
         verbose_name='Дата публикации',

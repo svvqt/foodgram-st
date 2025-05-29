@@ -23,7 +23,7 @@ class User(AbstractUser):
     password = models.CharField(max_length=150, verbose_name='Пароль')
     avatar = models.ImageField(
         'Аватар',
-        upload_to='users/avatars/',
+        upload_to='avatars/',
         blank=True,
         null=True
     )

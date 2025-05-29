@@ -6,7 +6,7 @@ from users.views import UserViewSet
 
 router = DefaultRouter()
 router.register('users', UserViewSet)
-router.register('recipes', RecipeViewSet)
+router.register('recipes', RecipeViewSet, basename='recipes')
 router.register('ingredients', IngredientViewSet)
 
 urlpatterns = [

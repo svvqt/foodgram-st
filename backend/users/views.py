@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
+from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
@@ -92,19 +92,20 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=False,
-        methods=['put'],
+        methods=['put', 'delete'],
         url_path='me/avatar',
         permission_classes=[IsAuthenticated],
-        parser_classes=[MultiPartParser, FormParser]  # Только для form-data
+        parser_classes=[JSONParser]
     )
     def avatar(self, request):
-        """Обновление аватара пользователя через form-data."""
-        if not request.content_type.startswith('multipart/form-data'):
-            return Response(
-                {"error": "Требуется Content-Type: multipart/form-data"},
-                status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
-            )
+        """Обновление аватара пользователя через base64."""
         user = request.user
+
+        if request.method == 'DELETE':
+            user.avatar.delete()  # Удаляет файл и записывает NULL в БД
+            user.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
         serializer = UserAvatarSerializer(
             user,
             data=request.data,
