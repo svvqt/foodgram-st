@@ -8,9 +8,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from django.shortcuts import get_object_or_404
 
-from recipes.models import (Recipe, Tag, Ingredient,
+from recipes.models import (Recipe, Ingredient,
                             Favorite, ShoppingCart, User)
-from api.serializers import (RecipeListSerializer, TagSerializer,
+from api.serializers import (RecipeListSerializer,
                              IngredientSerializer, FavoriteSerializer,
                              ShoppingCartSerializer, RecipeWriteSerializer)
 from api.services import shopping_cart
@@ -19,13 +19,13 @@ from api.filters import IngredientSearchFilter, RecipeFilter
 from api.paginations import ApiPagination
 
 
-class TagViewSet(mixins.ListModelMixin,
-                 mixins.RetrieveModelMixin,
-                 viewsets.GenericViewSet):
-    """Функция для модели тегов."""
-    queryset = Tag.objects.all()
-    serializer_class = TagSerializer
-    permission_classes = (AllowAny, )
+#class TagViewSet(mixins.ListModelMixin,
+#                 mixins.RetrieveModelMixin,
+#                 viewsets.GenericViewSet):
+#    """Функция для модели тегов."""
+#    queryset = Tag.objects.all()
+#    serializer_class = TagSerializer
+#    permission_classes = (AllowAny, )
 
 
 class IngredientViewSet(mixins.ListModelMixin,

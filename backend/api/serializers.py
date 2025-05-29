@@ -4,7 +4,7 @@ from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 
 from recipes.models import (Recipe, Ingredient,
-                            Tag, IngredientRecipe,
+                            IngredientRecipe,
                             ShoppingCart, Favorite)
 from users.serializers import UserSerializer
 
@@ -57,12 +57,12 @@ class IngredientSerializer(serializers.ModelSerializer):
         read_only_fields = '__all__',
 
 
-class TagSerializer(serializers.ModelSerializer):
-    """Serializer для модели Tag."""
-    class Meta:
-        model = Tag
-        fields = ('id', 'name', 'color', 'slug')
-        read_only_fields = '__all__',
+#class TagSerializer(serializers.ModelSerializer):
+#    """Serializer для модели Tag."""
+#    class Meta:
+#        model = Tag
+#        fields = ('id', 'name', 'color', 'slug')
+#        read_only_fields = '__all__',
 
 
 class IngredientRecipeSerializer(serializers.ModelSerializer):
@@ -87,9 +87,9 @@ class RecipeListSerializer(serializers.ModelSerializer):
     amount из промежуточной модели.
     """
     author = UserSerializer()
-    tags = TagSerializer(
-        many=True,
-        read_only=True)
+    #tags = TagSerializer(
+    #    many=True,
+    #    read_only=True)
     ingredients = IngredientRecipeSerializer(
         many=True,
         source='recipe_ingredients',
@@ -99,7 +99,7 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'author', 'ingredients',
+        fields = ('id', 'author', 'ingredients',
                   'is_favorited', 'is_in_shopping_cart',
                   'name', 'image', 'text', 'cooking_time')
 
@@ -134,16 +134,16 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     ingredients = AddIngredientSerializer(
         many=True,
         write_only=True)
-    tags = serializers.PrimaryKeyRelatedField(
-        queryset=Tag.objects.all(),
-        many=True)
+    #tags = serializers.PrimaryKeyRelatedField(
+    #    queryset=Tag.objects.all(),
+    #    many=True)
     image = Base64ImageField()
     author = serializers.HiddenField(
         default=serializers.CurrentUserDefault())
 
     class Meta:
         model = Recipe
-        fields = ('ingredients', 'tags', 'image',
+        fields = ('ingredients', 'image',
                   'name', 'text', 'cooking_time', 'author')
 
     def validate_ingredients(self, value):
@@ -163,18 +163,18 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             ingredients_list.append(ingredient)
         return value
 
-    def validate_tags(self, value):
-        tags = value
-        if not tags:
-            raise ValidationError(
-                {'tags': 'Нужно выбрать тег!'})
-        tags_list = []
-        for tag in tags:
-            if tag in tags_list:
-                raise ValidationError(
-                    {'tags': 'Теги повторяются!'})
-            tags_list.append(tag)
-        return value
+    #def validate_tags(self, value):
+    #    tags = value
+    #    if not tags:
+    #        raise ValidationError(
+    #            {'tags': 'Нужно выбрать тег!'})
+    #    tags_list = []
+    #    for tag in tags:
+    #        if tag in tags_list:
+    #            raise ValidationError(
+    #                {'tags': 'Теги повторяются!'})
+    #        tags_list.append(tag)
+    #    return value
 
     def to_representation(self, instance):
         ingredients = super().to_representation(instance)
@@ -182,26 +182,26 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             instance.recipe_ingredients.all(), many=True).data
         return ingredients
 
-    def add_tags_ingredients(self, ingredients, tags, model):
-        for ingredient in ingredients:
-            IngredientRecipe.objects.update_or_create(
-                recipe=model,
-                ingredient=ingredient['id'],
-                amount=ingredient['amount'])
-        model.tags.set(tags)
+    #def add_tags_ingredients(self, ingredients, tags, model):
+    #    for ingredient in ingredients:
+    #        IngredientRecipe.objects.update_or_create(
+    #            recipe=model,
+    #            ingredient=ingredient['id'],
+    #            amount=ingredient['amount'])
+    #    model.tags.set(tags)
 
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')
-        tags = validated_data.pop('tags')
+        #tags = validated_data.pop('tags')
         recipe = super().create(validated_data)
-        self.add_tags_ingredients(ingredients, tags, recipe)
+        self.add_tags_ingredients(ingredients, recipe)
         return recipe
 
     def update(self, instance, validated_data):
         ingredients = validated_data.pop('ingredients')
-        tags = validated_data.pop('tags')
+        #tags = validated_data.pop('tags')
         instance.ingredients.clear()
-        self.add_tags_ingredients(ingredients, tags, instance)
+        self.add_tags_ingredients(ingredients, instance)
         return super().update(instance, validated_data)
 
 

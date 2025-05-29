@@ -1,5 +1,7 @@
 FROM python:3.8-slim
 
+RUN apt-get update && apt-get install -y netcat-openbsd && apt-get clean
+
 RUN mkdir /app
 
 COPY requirements.txt /app
@@ -10,5 +12,9 @@ COPY . /app
 
 WORKDIR /app
 
-# Не выполняем collectstatic здесь — он будет в CMD
-CMD ["sh", "-c", "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn foodgram.wsgi:application --bind 0:8000"]
+# Копируем entrypoint
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Используем его как точку входа
+ENTRYPOINT ["/app/entrypoint.sh"]
