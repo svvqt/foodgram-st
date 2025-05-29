@@ -10,7 +10,10 @@ from django.shortcuts import get_object_or_404
 
 from recipes.models import Follow
 from users.models import User
-from users.serializers import FollowSerializer, UserSerializer, UserAvatarSerializer
+from users.serializers import (
+    FollowSerializer,
+    UserSerializer,
+    UserAvatarSerializer)
 from api.permissions import IsCurrentUserOrAdminOrReadOnly
 
 

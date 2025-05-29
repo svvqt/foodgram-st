@@ -6,7 +6,7 @@ from django.http import HttpResponseRedirect
 from django.contrib import messages
 import logging
 import json
-from .models import Ingredient
+# from .models import Ingredient
 
 from .models import (Favorite, Follow, Ingredient, IngredientRecipe,
                      Recipe, ShoppingCart,)
@@ -118,7 +118,7 @@ class IngredientAdmin(admin.ModelAdmin):
             path('upload-json/', self.upload_json, name='upload_json'),
         ]
         return custom_urls + urls
-    
+
     def upload_json(self, request):
         logger.warning("upload_json view called")
         try:
@@ -138,7 +138,10 @@ class IngredientAdmin(admin.ModelAdmin):
                             created_count += 1
                         else:
                             updated_count += 1
-                    messages.success(request, f"Успешно загружено! Создано: {created_count}, Обновлено: {updated_count}")
+                    messages.success(
+                        request,
+                        f"Успешно загружено! Создано: {created_count}, Обновлено: {updated_count}"
+                        )
                     return HttpResponseRedirect("../")
             else:
                 form = JsonUploadForm()
