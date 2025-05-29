@@ -87,9 +87,6 @@ class RecipeListSerializer(serializers.ModelSerializer):
     amount из промежуточной модели.
     """
     author = UserSerializer()
-    #tags = TagSerializer(
-    #    many=True,
-    #    read_only=True)
     ingredients = IngredientRecipeSerializer(
         many=True,
         source='recipe_ingredients',
@@ -134,9 +131,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     ingredients = AddIngredientSerializer(
         many=True,
         write_only=True)
-    #tags = serializers.PrimaryKeyRelatedField(
-    #    queryset=Tag.objects.all(),
-    #    many=True)
     image = Base64ImageField()
     author = serializers.HiddenField(
         default=serializers.CurrentUserDefault())
@@ -163,26 +157,13 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             ingredients_list.append(ingredient)
         return value
 
-    #def validate_tags(self, value):
-    #    tags = value
-    #    if not tags:
-    #        raise ValidationError(
-    #            {'tags': 'Нужно выбрать тег!'})
-    #    tags_list = []
-    #    for tag in tags:
-    #        if tag in tags_list:
-    #            raise ValidationError(
-    #                {'tags': 'Теги повторяются!'})
-    #        tags_list.append(tag)
-    #    return value
-
     def to_representation(self, instance):
         ingredients = super().to_representation(instance)
         ingredients['ingredients'] = IngredientRecipeSerializer(
             instance.recipe_ingredients.all(), many=True).data
         return ingredients
 
-    #def add_tags_ingredients(self, ingredients, tags, model):
+    # def add_tags_ingredients(self, ingredients, tags, model):
     #    for ingredient in ingredients:
     #        IngredientRecipe.objects.update_or_create(
     #            recipe=model,
@@ -192,14 +173,12 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')
-        #tags = validated_data.pop('tags')
         recipe = super().create(validated_data)
         self.add_tags_ingredients(ingredients, recipe)
         return recipe
 
     def update(self, instance, validated_data):
         ingredients = validated_data.pop('ingredients')
-        #tags = validated_data.pop('tags')
         instance.ingredients.clear()
         self.add_tags_ingredients(ingredients, instance)
         return super().update(instance, validated_data)

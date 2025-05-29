@@ -26,39 +26,6 @@ class Ingredient(models.Model):
         return f'{self.name}'
 
 
-#class Tag(models.Model):
-#    """Тэги для рецептов с предустановленным выбором."""
-#    GREEN = '09db4f'
-#    ORANGE = 'fa6a02'
-#    PURPLE = 'b813d1'
-#    COLOR_TAG = [
-#        (GREEN, 'Зеленый'),
-#        (ORANGE, 'Оранжевый'),
-#        (PURPLE, 'Фиолетовый')
-#    ]
-#    name = models.CharField(
-#        verbose_name='Название тега',
-#        max_length=200, unique=True,
-#        help_text='Введите название тега')
-#    color = models.CharField(
-#        verbose_name='Цвет в HEX',
-#        max_length=7, unique=True,
-#        default=GREEN,
-#        choices=COLOR_TAG,
-#        help_text='Выберите цвет')
-#    slug = models.SlugField(
-#        verbose_name='Уникальный слаг',
-#        max_length=200, unique=True,
-#        help_text='Укажите уникальный слаг')
-#
-#    class Meta:
-#        verbose_name = "Тег"
-#        verbose_name_plural = 'Теги'
-#
-#    def __str__(self):
-#        return self.name
-
-
 class Recipe(models.Model):
     """
     Модель для рецептов.
@@ -73,10 +40,6 @@ class Recipe(models.Model):
         Ingredient,
         through='IngredientRecipe',
         verbose_name='Ингредиент')
-    #tags = models.ManyToManyField(
-    #    Tag,
-    #    verbose_name='Название тега',
-    #    help_text='Выберите tag')
     text = models.TextField(
         verbose_name='Описание рецепта',
         help_text='Опишите приготовление рецепта')

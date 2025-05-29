@@ -11,11 +11,6 @@ class IngredientSearchFilter(SearchFilter):
 class RecipeFilter(FilterSet):
     author = filters.ModelChoiceFilter(
         queryset=User.objects.all())
-    #tags = filters.ModelMultipleChoiceFilter(
-    #    field_name='tags__slug',
-    #    to_field_name='slug',
-    #    queryset=Tag.objects.all(),
-    #)
     is_in_shopping_cart = filters.NumberFilter(
         method='filter_is_in_shopping_cart')
     is_favorited = filters.NumberFilter(

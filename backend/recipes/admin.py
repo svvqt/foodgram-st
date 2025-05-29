@@ -13,6 +13,7 @@ from .models import (Favorite, Follow, Ingredient, IngredientRecipe,
 
 logger = logging.getLogger(__name__)
 
+
 class IngredientsInline(admin.TabularInline):
     """
     Админ-зона для интеграции добавления ингридиентов в рецепты.
@@ -155,7 +156,6 @@ class IngredientAdmin(admin.ModelAdmin):
 
 admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
-#admin.site.register(Tag, TagAdmin)
 admin.site.register(IngredientRecipe, IngredientRecipeAdmin)
 admin.site.register(Follow, FollowAdmin)
 admin.site.register(Favorite, FavoriteAdmin)

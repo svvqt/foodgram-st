@@ -7,7 +7,6 @@ from users.views import UserViewSet
 router = DefaultRouter()
 router.register('users', UserViewSet)
 router.register('recipes', RecipeViewSet)
-#router.register('tags', TagViewSet)
 router.register('ingredients', IngredientViewSet)
 
 urlpatterns = [

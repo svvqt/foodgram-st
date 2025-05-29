@@ -19,15 +19,6 @@ from api.filters import IngredientSearchFilter, RecipeFilter
 from api.paginations import ApiPagination
 
 
-#class TagViewSet(mixins.ListModelMixin,
-#                 mixins.RetrieveModelMixin,
-#                 viewsets.GenericViewSet):
-#    """Функция для модели тегов."""
-#    queryset = Tag.objects.all()
-#    serializer_class = TagSerializer
-#    permission_classes = (AllowAny, )
-
-
 class IngredientViewSet(mixins.ListModelMixin,
                         mixins.RetrieveModelMixin,
                         viewsets.GenericViewSet):
