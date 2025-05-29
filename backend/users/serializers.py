@@ -1,10 +1,12 @@
 from rest_framework import serializers
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-
+from django.core.files.base import ContentFile
 from recipes.models import Follow, Recipe
 from users.models import User
 import api.serializers
+import base64
+import uuid
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -14,11 +16,12 @@ class UserSerializer(serializers.ModelSerializer):
     кастомным url. - шифрование пароля по правилам djosera.
     """
     is_subscribed = serializers.SerializerMethodField()
+    avatar = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = User
         fields = ('email', 'id', 'username', 'first_name',
-                  'last_name', 'password', 'is_subscribed')
+                  'last_name', 'password', 'is_subscribed', 'avatar')
         extra_kwargs = {'password': {'write_only': True},
                         'is_subscribed': {'read_only': True}}
 
@@ -81,3 +84,16 @@ class FollowSerializer(serializers.ModelSerializer):
                 detail='Невозможно подписаться на себя!',
                 code=status.HTTP_400_BAD_REQUEST)
         return data
+
+
+class UserAvatarSerializer(serializers.ModelSerializer):
+    avatar = serializers.ImageField(required=True)  # Принимаем файл изображения
+
+    class Meta:
+        model = User
+        fields = ('avatar',)
+
+    def update(self, instance, validated_data):
+        instance.avatar = validated_data['avatar']
+        instance.save()
+        return instance

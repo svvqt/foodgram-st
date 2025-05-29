@@ -10,6 +10,7 @@ done
 echo "PostgreSQL started"
 
 # Применяем миграции
+python manage.py makemigrations --noinput
 python manage.py migrate --noinput
 
 # Собираем статику

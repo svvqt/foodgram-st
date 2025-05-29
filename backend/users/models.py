@@ -21,6 +21,12 @@ class User(AbstractUser):
     role = models.CharField(max_length=15, choices=ROLE_USER,
                             default=USER, verbose_name='Пользовательская роль')
     password = models.CharField(max_length=150, verbose_name='Пароль')
+    avatar = models.ImageField(
+        'Аватар',
+        upload_to='users/avatars/',
+        blank=True,
+        null=True
+    )
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'password', 'first_name', 'last_name']
 

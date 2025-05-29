@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
@@ -9,7 +10,7 @@ from django.shortcuts import get_object_or_404
 
 from recipes.models import Follow
 from users.models import User
-from users.serializers import FollowSerializer, UserSerializer
+from users.serializers import FollowSerializer, UserSerializer, UserAvatarSerializer
 from api.permissions import IsCurrentUserOrAdminOrReadOnly
 
 
@@ -19,6 +20,12 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = (IsCurrentUserOrAdminOrReadOnly, )
     pagination_class = ApiPagination
     serializer_class = UserSerializer
+
+    def perform_update(self, serializer):
+        if 'avatar' in self.request.FILES:
+            serializer.save(avatar=self.request.FILES['avatar'])
+        else:
+            serializer.save()
 
     @action(detail=False,
             methods=['get'],
@@ -82,3 +89,28 @@ class UserViewSet(viewsets.ModelViewSet):
                                       many=True,
                                       context={'request': request})
         return self.get_paginated_response(serializer.data)
+
+    @action(
+        detail=False,
+        methods=['put'],
+        url_path='me/avatar',
+        permission_classes=[IsAuthenticated],
+        parser_classes=[MultiPartParser, FormParser]  # Только для form-data
+    )
+    def avatar(self, request):
+        """Обновление аватара пользователя через form-data."""
+        if not request.content_type.startswith('multipart/form-data'):
+            return Response(
+                {"error": "Требуется Content-Type: multipart/form-data"},
+                status=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+            )
+        user = request.user
+        serializer = UserAvatarSerializer(
+            user,
+            data=request.data,
+            partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

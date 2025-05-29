@@ -57,14 +57,6 @@ class IngredientSerializer(serializers.ModelSerializer):
         read_only_fields = '__all__',
 
 
-#class TagSerializer(serializers.ModelSerializer):
-#    """Serializer для модели Tag."""
-#    class Meta:
-#        model = Tag
-#        fields = ('id', 'name', 'color', 'slug')
-#        read_only_fields = '__all__',
-
-
 class IngredientRecipeSerializer(serializers.ModelSerializer):
     """Serializer для связаной модели Recipe и Ingredient."""
     id = serializers.ReadOnlyField(
@@ -163,13 +155,15 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
             instance.recipe_ingredients.all(), many=True).data
         return ingredients
 
-    # def add_tags_ingredients(self, ingredients, tags, model):
-    #    for ingredient in ingredients:
-    #        IngredientRecipe.objects.update_or_create(
-    #            recipe=model,
-    #            ingredient=ingredient['id'],
-    #            amount=ingredient['amount'])
-    #    model.tags.set(tags)
+    def add_tags_ingredients(self, ingredients, recipe):
+        """Добавляет ингредиенты в рецепт."""
+        IngredientRecipe.objects.bulk_create(
+            [IngredientRecipe(
+                recipe=recipe,
+                ingredient=ingredient['id'],
+                amount=ingredient['amount']
+            ) for ingredient in ingredients]
+        )
 
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')
