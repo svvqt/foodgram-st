@@ -90,16 +90,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = request.user
 
         if request.method == 'POST':
-            serializer = FavoriteSerializer(
-                data={'user': request.user.id, 'recipe': recipe.id},
-                context={'request': request}
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
+            if Favorite.objects.filter(user=request.user, recipe=recipe).exists():
+                return Response(
+                    {'errors': 'Рецепт уже в избранном'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            favorite = Favorite.objects.create(user=request.user, recipe=recipe)
+            serializer = FavoriteSerializer(favorite, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
         elif request.method == 'DELETE':
             try:
                 favorite = Favorite.objects.get(user=user, recipe=recipe)
@@ -121,16 +121,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = request.user
 
         if request.method == 'POST':
-            serializer = ShoppingCartSerializer(
-                data={'user': request.user.id, 'recipe': recipe.id},
-                context={'request': request}
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
+            if ShoppingCart.objects.filter(user=request.user, recipe=recipe).exists():
+                return Response(
+                    {'errors': 'Рецепт уже в корзине'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+            cart_item = ShoppingCart.objects.create(user=request.user, recipe=recipe)
+            serializer = ShoppingCartSerializer(cart_item, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         elif request.method == 'DELETE':
             try:
                 cart_item = ShoppingCart.objects.get(user=user, recipe=recipe)

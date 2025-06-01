@@ -23,12 +23,15 @@ DB_PORT=5432
 ```
 docker-compose up --build
 ```
-в нем соберется проект, выполнятся миграции и соберется статика
+в нем соберется проект, выполнятся миграции и соберется статика, затем в той же папке выполняем команду
+
+```
+docker-compose exec backend python manage.py loaddata ingredients_converted
+```
+
+**_После проект будет доступен по адресу: http://localhost/_**, а backend проекта **_http://localhost:8000/api_**
 
 **_Затем нужно создать суперпользователя._**
 ```
 docker-compose exec backend python manage.py createsuperuser
 ```
-Вводим любые удобные данные и переходим в http://localhost/admin, логинимся, а затем переходим http://localhost/admin/recipes/ingredient/upload-json/, нажимаем на кнопку 'выберите файл', находим в директории проекта папку data, выбираем ingredients.json, затем нажимаем загрузить json. После нескольких секунд данные из json будут загружены в бд. Выходим из админки
-
-**_После проект будет доступен по адресу: http://localhost/_**

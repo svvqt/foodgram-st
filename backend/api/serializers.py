@@ -157,6 +157,14 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 {'image': ['Это поле обязательно.']},
                 code='required'
             )
+        # Проверяем, является ли запрос PATCH (обновлением)
+        if self.context['request'].method == 'PATCH':
+            # Если ingredients не переданы в запросе, вызываем ошибку
+            if 'ingredients' not in data:
+                raise serializers.ValidationError(
+                    {'ingredients': ['Это поле обязательно при обновлении рецепта.']},
+                    code='required'
+                )
         return data
 
     def validate_image(self, value):
@@ -275,36 +283,31 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return response_data
 
 
-class FavoriteSerializer(serializers.ModelSerializer):
+class BaseRecipeActionSerializer(serializers.ModelSerializer):
+    """Базовый сериализатор для действий с рецептами (избранное/корзина)"""
+    id = serializers.ReadOnlyField(source='recipe.id')
+    name = serializers.ReadOnlyField(source='recipe.name')
+    image = serializers.SerializerMethodField()
+    cooking_time = serializers.ReadOnlyField(source='recipe.cooking_time')
+
     class Meta:
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        if obj.recipe.image:
+            return request.build_absolute_uri(obj.recipe.image.url)
+        return None
+
+
+class FavoriteSerializer(BaseRecipeActionSerializer):
+    class Meta(BaseRecipeActionSerializer.Meta):
         model = Favorite
-        fields = ('user', 'recipe')
-
-    def validate(self, data):
-        if Favorite.objects.filter(
-            user=data['user'],
-            recipe=data['recipe']
-        ).exists():
-            raise serializers.ValidationError(
-                'Рецепт уже в избранном'
-            )
-        return data
 
 
-class ShoppingCartSerializer(serializers.ModelSerializer):
-    class Meta:
+class ShoppingCartSerializer(BaseRecipeActionSerializer):
+    class Meta(BaseRecipeActionSerializer.Meta):
         model = ShoppingCart
-        fields = ('user', 'recipe')
-
-    def validate(self, data):
-        if ShoppingCart.objects.filter(
-            user=data['user'],
-            recipe=data['recipe']
-        ).exists():
-            raise serializers.ValidationError(
-                'Рецепт уже в списке покупок'
-            )
-        return data
 
 
 class RecipeMiniSerializer(serializers.ModelSerializer):
