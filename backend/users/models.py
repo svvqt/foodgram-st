@@ -1,6 +1,7 @@
 from django.db import models
 
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinLengthValidator, EmailValidator
 
 
 class User(AbstractUser):
@@ -14,13 +15,13 @@ class User(AbstractUser):
         (USER, 'Пользователь'),
         (ADMIN, 'Администратор')
     ]
-    username = models.CharField('Логин', max_length=150, unique=True)
+    username = models.CharField('Логин', max_length=150, unique=True, validators=[MinLengthValidator(3)])
     first_name = models.CharField('Имя', max_length=150)
     last_name = models.CharField('Фамилия', max_length=150)
-    email = models.EmailField('email-адрес', unique=True)
+    email = models.EmailField('email-адрес', unique=True, validators=[EmailValidator()])
     role = models.CharField(max_length=15, choices=ROLE_USER,
                             default=USER, verbose_name='Пользовательская роль')
-    password = models.CharField(max_length=150, verbose_name='Пароль')
+    password = models.CharField(max_length=150, verbose_name='Пароль', validators=[MinLengthValidator(8)])
     avatar = models.ImageField(
         'Аватар',
         upload_to='avatars/',
@@ -36,7 +37,7 @@ class User(AbstractUser):
 
     @property
     def admin(self):
-        return self.role == self.ADMIN
+        return self.role == self.ADMIN or self.is_superuser
 
     def __str__(self):
         return self.username

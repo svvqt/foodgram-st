@@ -3,116 +3,71 @@ from django import forms
 from django.shortcuts import render
 from django.urls import path
 from django.http import HttpResponseRedirect
-from django.contrib import messages
-import logging
 import json
-# from .models import Ingredient
+import logging
 
-from .models import (Favorite, Follow, Ingredient, IngredientRecipe,
-                     Recipe, ShoppingCart,)
+from .models import (
+    Ingredient, Recipe, RecipeIngredient,
+    Favorite, ShoppingCart
+)
 
 logger = logging.getLogger(__name__)
 
 
-class IngredientsInline(admin.TabularInline):
-    """
-    Админ-зона для интеграции добавления ингридиентов в рецепты.
-    Сразу доступно добавление 3х ингрдиентов.
-    """
-    model = IngredientRecipe
-    extra = 3
+class RecipeIngredientInline(admin.TabularInline):
+    model = RecipeIngredient
+    extra = 1
+    min_num = 1
 
 
-class FollowAdmin(admin.ModelAdmin):
-    """
-    Админ-зона подписок.
-    """
-    list_display = ('user', 'author')
-    list_filter = ('author',)
-    search_fields = ('user',)
-
-
-class FavoriteAdmin(admin.ModelAdmin):
-    """
-    Админ-зона избранных рецептов.
-    """
-    list_display = ('author', 'recipe')
-    list_filter = ('author',)
-    search_fields = ('author',)
-
-
-class ShoppingCartAdmin(admin.ModelAdmin):
-    """
-    Админ-зона покупок.
-    """
-    list_display = ('author', 'recipe')
-    list_filter = ('author',)
-    search_fields = ('author',)
-
-
-class IngredientRecipeAdmin(admin.ModelAdmin):
-    """
-    Админ-зона ингридентов для рецептов.
-    """
-    list_display = ('id', 'recipe', 'ingredient', 'amount',)
-    list_filter = ('recipe', 'ingredient')
-    search_fields = ('name',)
-
-
+@admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    """
-    Админ-зона рецептов.
-    Добавлен просмотр кол-ва добавленных рецептов в избранное.
-    """
-    list_display = ('id', 'author', 'name', 'pub_date', 'in_favorite', )
-    search_fields = ('name',)
-    list_filter = ('pub_date', 'author', 'name')
-    filter_horizontal = ('ingredients',)
-    empty_value_display = '-пусто-'
-    inlines = [IngredientsInline]
+    list_display = (
+        'id', 'name', 'author',
+        'cooking_time', 'pub_date',
+        'favorites_count'
+    )
+    list_filter = ('author', 'name', 'pub_date')
+    search_fields = ('name', 'author__username')
+    inlines = (RecipeIngredientInline,)
 
-    def in_favorite(self, obj):
-        return obj.favorite.all().count()
-
-    in_favorite.short_description = 'Добавленные рецепты в избранное'
+    def favorites_count(self, obj):
+        return obj.in_favorites.count()
+    favorites_count.short_description = 'В избранном'
 
 
-class TagAdmin(admin.ModelAdmin):
-    """
-    Админ-зона тегов.
-    """
-    list_display = ('id', 'name', 'slug', 'color')
+@admin.register(Ingredient)
+class IngredientAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'measurement_unit')
     list_filter = ('name',)
     search_fields = ('name',)
 
 
-# class IngredientAdmin(admin.ModelAdmin):
-#    """
-#    Админ-зона ингридиентов.
-#    """
-#    list_display = ('name', 'measurement_unit')
-#    list_filter = ('name',)
-#    search_fields = ('name',)
+@admin.register(Favorite)
+class FavoriteAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'recipe')
+    list_filter = ('user',)
+    search_fields = ('user__username', 'recipe__name')
+
+
+@admin.register(ShoppingCart)
+class ShoppingCartAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'recipe')
+    list_filter = ('user',)
+    search_fields = ('user__username', 'recipe__name')
 
 
 class JsonUploadForm(forms.Form):
-    """Форма для загрузки JSON файла"""
     json_file = forms.FileField(label='JSON файл с ингредиентами')
 
 
-class IngredientAdmin(admin.ModelAdmin):
-    """
-    Админ-зона ингредиентов с возможностью загрузки из JSON.
-    """
-    list_display = ('name', 'measurement_unit')
-    list_filter = ('name',)
-    search_fields = ('name',)
-    # кастомные шаблоны
-    change_form_template = 'admin/ingredient_change_form.html'
-    change_list_template = 'admin/ingredients_change_list.html'
-    
+@admin.register(RecipeIngredient)
+class RecipeIngredientAdmin(admin.ModelAdmin):
+    list_display = ('id', 'recipe', 'ingredient', 'amount')
+    list_filter = ('recipe', 'ingredient')
+    search_fields = ('recipe__name', 'ingredient__name')
+
     def get_urls(self):
-        """Добавляем кастомный URL для загрузки JSON"""
         urls = super().get_urls()
         custom_urls = [
             path('upload-json/', self.upload_json, name='upload_json'),
@@ -120,47 +75,37 @@ class IngredientAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def upload_json(self, request):
-        logger.warning("upload_json view called")
-        try:
-            if request.method == 'POST':
-                form = JsonUploadForm(request.POST, request.FILES)
-                if form.is_valid():
+        if request.method == 'POST':
+            form = JsonUploadForm(request.POST, request.FILES)
+            if form.is_valid():
+                try:
                     json_file = request.FILES['json_file']
                     data = json.loads(json_file.read().decode('utf-8'))
-                    created_count = 0
-                    updated_count = 0
+                    created = 0
                     for item in data:
-                        obj, created = Ingredient.objects.update_or_create(
+                        Ingredient.objects.get_or_create(
                             name=item['name'],
-                            defaults={'measurement_unit': item['measurement_unit']}
+                            measurement_unit=item['measurement_unit']
                         )
-                        if created:
-                            created_count += 1
-                        else:
-                            updated_count += 1
-                    messages.success(
+                        created += 1
+                    self.message_user(
                         request,
-                        f"Успешно загружено! Создано: {created_count}, Обновлено: {updated_count}"
-                        )
-                    return HttpResponseRedirect("../")
-            else:
-                form = JsonUploadForm()
-            context = self.admin_site.each_context(request)
-            context.update({
-                'form': form,
-                'title': 'Загрузка ингредиентов из JSON',
-                'opts': self.model._meta,
-            })
-            return render(request, 'admin/json_upload.html', context)
-        except Exception as e:
-            logger.error(f"Error in upload_json: {e}", exc_info=True)
-            messages.error(request, f"Ошибка загрузки: {str(e)}")
-            return HttpResponseRedirect("../")
+                        f'Успешно загружено {created} ингредиентов'
+                    )
+                except Exception as e:
+                    logger.error(f'Ошибка загрузки JSON: {e}')
+                    self.message_user(
+                        request,
+                        f'Ошибка загрузки: {e}',
+                        level='error'
+                    )
+                return HttpResponseRedirect("../")
+        else:
+            form = JsonUploadForm()
 
-
-admin.site.register(Recipe, RecipeAdmin)
-admin.site.register(Ingredient, IngredientAdmin)
-admin.site.register(IngredientRecipe, IngredientRecipeAdmin)
-admin.site.register(Follow, FollowAdmin)
-admin.site.register(Favorite, FavoriteAdmin)
-admin.site.register(ShoppingCart, ShoppingCartAdmin)
+        context = {
+            'form': form,
+            'title': 'Загрузка ингредиентов из JSON',
+            'opts': self.model._meta,
+        }
+        return render(request, 'admin/json_upload.html', context)

@@ -1,42 +1,53 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status, permissions
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate
 from djoser.serializers import SetPasswordSerializer
 from rest_framework.permissions import IsAuthenticated
-from api.paginations import ApiPagination
+from rest_framework.exceptions import AuthenticationFailed
+from django.db.models import Prefetch
+from recipes.models import Recipe
 from django.shortcuts import get_object_or_404
-
+from api.paginations import StandardResultsSetPagination
 from recipes.models import Follow
 from users.models import User
 from users.serializers import (
-    FollowSerializer,
     UserSerializer,
-    UserAvatarSerializer)
-from api.permissions import IsCurrentUserOrAdminOrReadOnly
+    FollowSerializer,
+    UserAvatarSerializer,
+    UserCreateSerializer
+)
+from api.permissions import IsUserOrAdminOrReadOnly
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    """Viewset для пользователя / подписок."""
     queryset = User.objects.all()
-    permission_classes = (IsCurrentUserOrAdminOrReadOnly, )
-    pagination_class = ApiPagination
     serializer_class = UserSerializer
+    pagination_class = StandardResultsSetPagination
 
-    def perform_update(self, serializer):
-        if 'avatar' in self.request.FILES:
-            serializer.save(avatar=self.request.FILES['avatar'])
-        else:
-            serializer.save()
+    # Динамически выбираем пермишены
+    def get_permissions(self):
+        if self.action == 'create':
+            # Для создания пользователя разрешаем всем
+            return [permissions.AllowAny()]
+        # Для остальных действий используем твой кастомный пермишен
+        return [IsUserOrAdminOrReadOnly()]
+
+    # Используем другой сериализатор для создания
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return UserCreateSerializer
+        return super().get_serializer_class()
 
     @action(detail=False,
             methods=['get'],
-            permission_classes=[IsAuthenticated])
+            permission_classes=[permissions.IsAuthenticated])
     def me(self, request):
-        """Кастомное получение профиля пользователя."""
-        user = self.request.user
-        serializer = UserSerializer(user, context={'request': request})
+        if not request.user.is_authenticated:
+            raise AuthenticationFailed("Требуется авторизация")  # явный 401
+        serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
     @action(["post"],
@@ -59,39 +70,69 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=True,
             methods=['post', 'delete'],
-            permission_classes=[IsAuthenticated])
-    def subscribe(self, request, *args, **kwargs):
-        """Создание и удаление подписки."""
-        author = get_object_or_404(User, id=self.kwargs.get('pk'))
-        user = self.request.user
+            permission_classes=[permissions.IsAuthenticated])
+    def subscribe(self, request, pk=None):
+        author = get_object_or_404(User, pk=pk)
+        user = request.user
+
         if request.method == 'POST':
+            # Проверяем, не подписан ли уже пользователь
+            if Follow.objects.filter(user=user, author=author).exists():
+                return Response(
+                    {'errors': 'Вы уже подписаны на этого пользователя!'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if user == author:
+                return Response(
+                    {'errors': 'Невозможно подписаться на себя!'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Создаем подписку
+            follow = Follow.objects.create(user=user, author=author)
+
+            # Сериализуем данные подписки
             serializer = FollowSerializer(
-                data=request.data,
-                context={'request': request, 'author': author})
-            if serializer.is_valid(raise_exception=True):
-                serializer.save(author=author, user=user)
-                return Response({'Подписка успешно создана': serializer.data},
-                                status=status.HTTP_201_CREATED)
-            return Response({'errors': 'Объект не найден'},
-                            status=status.HTTP_404_NOT_FOUND)
-        if Follow.objects.filter(author=author, user=user).exists():
-            Follow.objects.get(author=author).delete()
-            return Response('Успешная отписка',
-                            status=status.HTTP_204_NO_CONTENT)
-        return Response({'errors': 'Объект не найден'},
-                        status=status.HTTP_404_NOT_FOUND)
+                follow,
+                context={'request': request}
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        elif request.method == 'DELETE':
+            try:
+                subscription = Follow.objects.get(user=user, author=author)
+                subscription.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            except Follow.DoesNotExist:
+                return Response(
+                    {'errors': 'Подписка не существует.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
     @action(detail=False,
             methods=['get'],
-            permission_classes=[IsAuthenticated])
+            permission_classes=[permissions.IsAuthenticated])
     def subscriptions(self, request):
         """Отображает все подписки пользователя."""
-        follows = Follow.objects.filter(user=self.request.user)
-        pages = self.paginate_queryset(follows)
-        serializer = FollowSerializer(pages,
-                                      many=True,
-                                      context={'request': request})
-        return self.get_paginated_response(serializer.data)
+        if not request.user.is_authenticated:
+            return Response(
+                {'detail': 'Authentication credentials were not provided.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+    
+        follows = Follow.objects.filter(
+            user=request.user
+        ).order_by('-id').select_related('author')
+    
+        # Пагинация
+        page = self.paginate_queryset(follows)
+        serializer = FollowSerializer(
+            page if page is not None else follows,
+            many=True,
+            context={'request': request}
+        )
+    
+        return self.get_paginated_response(serializer.data) if page is not None else Response(serializer.data)
 
     @action(
         detail=False,
@@ -108,6 +149,12 @@ class UserViewSet(viewsets.ModelViewSet):
             user.avatar.delete()  # Удаляет файл и записывает NULL в БД
             user.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+        if 'avatar' not in request.data:
+            return Response(
+                {"avatar": ["Это поле обязательно."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         serializer = UserAvatarSerializer(
             user,
