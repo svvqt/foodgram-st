@@ -1,14 +1,10 @@
 from rest_framework import serializers
-from django.contrib.auth import authenticate
-from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
-from django.contrib.auth.hashers import make_password
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from rest_framework.authtoken.models import Token
 from drf_extra_fields.fields import Base64ImageField
 from django.core.validators import RegexValidator
-from django.core.validators import MinLengthValidator, EmailValidator
-from recipes.models import Follow, Recipe
+from django.core.validators import MinLengthValidator
+from recipes.models import Follow
 from users.models import User
 
 
@@ -18,10 +14,14 @@ class UserCreateSerializer(serializers.ModelSerializer):
         validators=[
             RegexValidator(
                 regex=r'^[\w.@+-]+$',  # только буквы, цифры, @/./+/-/_
-                message='Username может содержать только буквы, цифры и @/./+/-/_',
+                message='Username может содержать только буквы, цифры и \
+                    @/./+/-/_',
                 code='invalid_username'
             ),
-            MinLengthValidator(3, message='Username должен быть не короче 3 символов.')
+            MinLengthValidator(3,
+                               message='Username должен быть не короче 3\
+                                  символов.'
+                               )
         ]
     )
 
@@ -32,14 +32,20 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError('Пользователь с таким username уже существует.')
+            raise serializers.ValidationError(
+                'Пользователь с таким username уже существует.'
+                )
         if len(value) > 150:
-            raise serializers.ValidationError('Username не может быть длиннее 150 символов.')
+            raise serializers.ValidationError(
+                'Username не может быть длиннее 150 символов.'
+                )
         return value
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError('Пользователь с таким email уже существует.')
+            raise serializers.ValidationError(
+                'Пользователь с таким email уже существует.'
+                )
         return value
 
     def create(self, validated_data):
@@ -121,7 +127,8 @@ class FollowSerializer(serializers.ModelSerializer):
         limit = request.query_params.get('recipes_limit') if request else None
         if limit and limit.isdigit():
             recipes = recipes[:int(limit)]
-        return RecipeMiniSerializer(recipes, many=True, context={'request': request}).data
+        return RecipeMiniSerializer(recipes, many=True,
+                                    context={'request': request}).data
 
     def get_recipes_count(self, obj):
         return obj.author.recipes.count()

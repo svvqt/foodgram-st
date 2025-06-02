@@ -19,7 +19,7 @@ class IsAuthorOrAdminOrReadOnly(permissions.BasePermission):
         # Разрешаем безопасные методы всем
         if request.method in permissions.SAFE_METHODS:
             return True
-            
+
         # Для изменений/удаления проверяем, что пользователь - автор или админ
         return (
             getattr(obj, 'author', None) == request.user or
@@ -46,7 +46,7 @@ class IsUserOrAdminOrReadOnly(permissions.BasePermission):
         # Разрешаем безопасные методы всем
         if request.method in permissions.SAFE_METHODS:
             return True
-            
+
         # Для изменений/удаления проверяем, что пользователь - владелец или админ
         return (
             obj == request.user or

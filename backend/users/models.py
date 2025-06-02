@@ -15,13 +15,19 @@ class User(AbstractUser):
         (USER, 'Пользователь'),
         (ADMIN, 'Администратор')
     ]
-    username = models.CharField('Логин', max_length=150, unique=True, validators=[MinLengthValidator(3)])
+    username = models.CharField('Логин', max_length=150,
+                                unique=True,
+                                validators=[MinLengthValidator(3)])
     first_name = models.CharField('Имя', max_length=150)
     last_name = models.CharField('Фамилия', max_length=150)
-    email = models.EmailField('email-адрес', unique=True, validators=[EmailValidator()])
+    email = models.EmailField('email-адрес',
+                              unique=True,
+                              validators=[EmailValidator()])
     role = models.CharField(max_length=15, choices=ROLE_USER,
                             default=USER, verbose_name='Пользовательская роль')
-    password = models.CharField(max_length=150, verbose_name='Пароль', validators=[MinLengthValidator(8)])
+    password = models.CharField(max_length=150,
+                                verbose_name='Пароль',
+                                validators=[MinLengthValidator(8)])
     avatar = models.ImageField(
         'Аватар',
         upload_to='avatars/',

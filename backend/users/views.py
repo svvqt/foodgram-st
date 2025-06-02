@@ -2,13 +2,9 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate
 from djoser.serializers import SetPasswordSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import AuthenticationFailed
-from django.db.models import Prefetch
-from recipes.models import Recipe
 from django.shortcuts import get_object_or_404
 from api.paginations import StandardResultsSetPagination
 from recipes.models import Follow
@@ -119,11 +115,11 @@ class UserViewSet(viewsets.ModelViewSet):
                 {'detail': 'Authentication credentials were not provided.'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
-    
+
         follows = Follow.objects.filter(
             user=request.user
         ).order_by('-id').select_related('author')
-    
+
         # Пагинация
         page = self.paginate_queryset(follows)
         serializer = FollowSerializer(
@@ -131,7 +127,7 @@ class UserViewSet(viewsets.ModelViewSet):
             many=True,
             context={'request': request}
         )
-    
+
         return self.get_paginated_response(serializer.data) if page is not None else Response(serializer.data)
 
     @action(

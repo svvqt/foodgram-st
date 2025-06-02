@@ -1,9 +1,5 @@
 from rest_framework import serializers
-from drf_extra_fields.fields import Base64ImageField
-from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
-from django.core.serializers.base import DeserializationError
-from django.core.serializers.json import Serializer as JsonSerializer
 from django.core.files.base import ContentFile
 import base64
 
@@ -96,9 +92,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         )
         extra_kwargs = {
             'image': {'required': True},
-            'ingredients': {'required': True, 
+            'ingredients': {'required': True,
                             'error_messages': {
-                             'required': 'Необходимо указать хотя бы один ингредиент',
+                             'required':
+                             'Необходимо указать хотя бы один ингредиент',
                              'null': 'Список ингредиентов не может быть пустым'
                             }
                             }
@@ -121,33 +118,36 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Необходимо указать ингредиенты'
             )
-        
+
         if not value or len(value) < 1:
             raise serializers.ValidationError(
                 {'ingredients': ['Должен быть указан хотя бы один ингредиент']},
                 code='min_length'
             )
-        
+
         # Проверка существования ингредиентов
         invalid_ingredients = []
         existing_ids = set(Ingredient.objects.filter(
             id__in=[item['id'] for item in value]
         ).values_list('id', flat=True))
-        
+
         for ingredient_data in value:
             if ingredient_data['id'] not in existing_ids:
                 invalid_ingredients.append(ingredient_data['id'])
-        
+
         if invalid_ingredients:
             raise serializers.ValidationError(
-                {'ingredients': [f'Ингредиенты с ID {invalid_ingredients} не существуют']},
+                {'ingredients':
+                  [f'Ингредиенты с ID {invalid_ingredients} не существуют']},
                 code='invalid'
             )
 
         # проверка повторяются ли ингредиенты
         ingredient_ids = [item['id'] for item in value]
         if len(ingredient_ids) != len(set(ingredient_ids)):
-            raise serializers.ValidationError('Ингредиенты не должны повторяться')
+            raise serializers.ValidationError(
+                'Ингредиенты не должны повторяться'
+                )
 
         return value
 
@@ -162,7 +162,8 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             # Если ingredients не переданы в запросе, вызываем ошибку
             if 'ingredients' not in data:
                 raise serializers.ValidationError(
-                    {'ingredients': ['Это поле обязательно при обновлении рецепта.']},
+                    {'ingredients':
+                     ['Это поле обязательно при обновлении рецепта.']},
                     code='required'
                 )
         return data

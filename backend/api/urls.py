@@ -1,7 +1,5 @@
 from django.urls import include, path, re_path
-from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework.routers import DefaultRouter
-from django.views.generic import TemplateView
 from .views import RecipeViewSet, IngredientViewSet
 from users.views import UserViewSet
 
