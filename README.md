@@ -2,7 +2,7 @@
 
 **_Склонировать репозиторий к себе_**
 ```
-git@github.com:svvqt/foodgram-st.git
+git clone @github.com:svvqt/foodgram-st.git
 ```
 
 **_В корневой папке файл myenv.env переименовать в .env и заполнить данными:_**
