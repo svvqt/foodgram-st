@@ -30,6 +30,11 @@ from api.permissions import IsAuthorOrAdminOrReadOnly
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet для работы с ингредиентами.
+    Поддерживает только чтение (list и retrieve).
+    Позволяет фильтровать ингредиенты по началу названия.
+    """
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
@@ -42,18 +47,27 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet для работы с рецептами.
+    """
     queryset = Recipe.objects.all()
     pagination_class = StandardResultsSetPagination
-    permission_classes = (IsAuthorOrAdminOrReadOnly,)
+    permission_classes = (IsAuthorOrAdminOrReadOnly,) # Права на редактирование только у автора или админа
 
     def get_serializer_class(self):
+        """Выбор сериализатора в зависимости от действия."""
         if self.action in ('create', 'update', 'partial_update'):
-            return RecipeCreateSerializer
-        return RecipeSerializer
+            return RecipeCreateSerializer # Для создания/обновления используем специальный сериализатор
+        return RecipeSerializer # Для чтения используем основной сериализатор
 
     def update(self, request, *args, **kwargs):
+        """
+        Обновление рецепта с дополнительной проверкой прав.
+        Только автор или администратор могут изменять рецепт.
+        """
         try:
             instance = self.get_object()
+            # Проверка прав на редактирование
             if instance.author != request.user and not request.user.is_staff:
                 raise PermissionDenied(
                     {"detail": "У вас нет прав изменять этот рецепт."}
@@ -69,19 +83,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
 
     def get_queryset(self):
+        """Фильтрация рецептов по параметрам запроса."""
         queryset = super().get_queryset()
         user = self.request.user
 
+        # Фильтрация по избранному
         is_favorited = self.request.query_params.get('is_favorited')
         if is_favorited == '1' and user.is_authenticated:
             queryset = queryset.filter(in_favorites__user=user)
 
+        # Фильтрация по наличию в корзине покупок
         is_in_shopping_cart = self.request.query_params.get(
             'is_in_shopping_cart'
         )
         if is_in_shopping_cart == '1' and user.is_authenticated:
             queryset = queryset.filter(in_shopping_carts__user=user)
 
+        # Фильтрация по автору
         author_id = self.request.query_params.get('author')
         if author_id:
             queryset = queryset.filter(author_id=author_id)
@@ -94,6 +112,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[permissions.IsAuthenticated]
     )
     def favorite(self, request, pk=None):
+        """
+        Добавление/удаление рецепта в избранное.
+        Доступно только аутентифицированным пользователям.
+        """
         recipe = self.get_object()
         user = request.user
         favorite_model = Favorite
@@ -141,6 +163,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[permissions.IsAuthenticated]
     )
     def shopping_cart(self, request, pk=None):
+        """
+        Добавление/удаление рецепта в корзину покупок.
+        Доступно только аутентифицированным пользователям.
+        """
         recipe = get_object_or_404(Recipe, pk=pk)
         user = request.user
         cart_model = ShoppingCart
@@ -182,6 +208,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[permissions.IsAuthenticated]
     )
     def download_shopping_cart(self, request):
+        """
+        Генерация PDF-файла со списком покупок.
+        Содержит агрегированный список всех ингредиентов из рецептов в корзине.
+        """
         # Регистрируем шрифты с поддержкой кириллицы
         font_path = Path(settings.BASE_DIR) / "static/fonts/DejaVuSans.ttf"
         font_bold_path = Path(settings.BASE_DIR) / "static/fonts/DejaVuSans-Bold.ttf"
@@ -249,7 +279,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path='get-link')
     def get_recipe_link(self, request, pk=None):
-        """Генерирует полную ссылку на рецепт."""
+        """
+        Генерация абсолютной ссылки на рецепт.
+        Возвращает полный URL для доступа к рецепту.
+        """
         recipe = self.get_object()
         absolute_url = request.build_absolute_uri(
             reverse('recipes-detail', kwargs={'pk': recipe.id}))

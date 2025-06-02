@@ -6,7 +6,7 @@ from django.core.validators import MinLengthValidator, EmailValidator
 
 class User(AbstractUser):
     """
-    Кастомизированная модель пользователя.
+    Модель пользователя.
     Регистрация с помощью email.
     """
     USER = 'user'

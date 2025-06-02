@@ -19,6 +19,9 @@ from api.permissions import IsUserOrAdminOrReadOnly
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet для работы с пользователями.
+    """
     queryset = User.objects.all()
     serializer_class = UserSerializer
     pagination_class = StandardResultsSetPagination
@@ -28,7 +31,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             # Для создания пользователя разрешаем всем
             return [permissions.AllowAny()]
-        # Для остальных действий используем твой кастомный пермишен
+        # Для остальных действий используем кастомный пермишен
         return [IsUserOrAdminOrReadOnly()]
 
     # Используем другой сериализатор для создания
@@ -41,8 +44,9 @@ class UserViewSet(viewsets.ModelViewSet):
             methods=['get'],
             permission_classes=[permissions.IsAuthenticated])
     def me(self, request):
+        """Получение данных текущего аутентифицированного пользователя."""
         if not request.user.is_authenticated:
-            raise AuthenticationFailed("Требуется авторизация")  # явный 401
+            raise AuthenticationFailed("Требуется авторизация")
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
@@ -50,10 +54,7 @@ class UserViewSet(viewsets.ModelViewSet):
             detail=False,
             permission_classes=[IsAuthenticated])
     def set_password(self, request, *args, **kwargs):
-        """
-        Кастомное изменение пароля с помощью cериалайзера
-        из пакета djoser SetPasswordSerializer.
-        """
+        """Изменение пароля текущего пользователя."""
         serializer = SetPasswordSerializer(
             data=request.data,
             context={'request': request})
@@ -68,11 +69,12 @@ class UserViewSet(viewsets.ModelViewSet):
             methods=['post', 'delete'],
             permission_classes=[permissions.IsAuthenticated])
     def subscribe(self, request, pk=None):
+        """Оформление/отмена подписки на пользователя."""
         author = get_object_or_404(User, pk=pk)
         user = request.user
 
         if request.method == 'POST':
-            # Проверяем, не подписан ли уже пользователь
+            # Проверка существующей подписки
             if Follow.objects.filter(user=user, author=author).exists():
                 return Response(
                     {'errors': 'Вы уже подписаны на этого пользователя!'},
@@ -84,7 +86,7 @@ class UserViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Создаем подписку
+            # Создание подписки
             follow = Follow.objects.create(user=user, author=author)
 
             # Сериализуем данные подписки
@@ -95,6 +97,7 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         elif request.method == 'DELETE':
+            # Удаление подписки
             try:
                 subscription = Follow.objects.get(user=user, author=author)
                 subscription.delete()
@@ -109,7 +112,7 @@ class UserViewSet(viewsets.ModelViewSet):
             methods=['get'],
             permission_classes=[permissions.IsAuthenticated])
     def subscriptions(self, request):
-        """Отображает все подписки пользователя."""
+        """Получение списка всех подписок текущего пользователя."""
         if not request.user.is_authenticated:
             return Response(
                 {'detail': 'Authentication credentials were not provided.'},
@@ -138,7 +141,7 @@ class UserViewSet(viewsets.ModelViewSet):
         parser_classes=[JSONParser]
     )
     def avatar(self, request):
-        """Обновление аватара пользователя через base64."""
+        """Обновление или удаление аватара текущего пользователя."""
         user = request.user
 
         if request.method == 'DELETE':

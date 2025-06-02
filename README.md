@@ -2,7 +2,7 @@
 
 **_Склонировать репозиторий к себе_**
 ```
-git clone @github.com:svvqt/foodgram-st.git
+git clone https://github.com/svvqt/foodgram-st.git
 ```
 
 **_В корневой папке файл myenv.env переименовать в .env и заполнить данными:_**
@@ -23,7 +23,7 @@ DB_PORT=5432
 ```
 docker-compose up --build
 ```
-в нем соберется проект, выполнятся миграции и соберется статика, затем в той же папке выполняем команду
+в нем соберется проект, выполнятся миграции и соберется статика, затем в этой же папке выполняем команду
 
 ```
 docker-compose exec backend python manage.py loaddata ingredients_converted

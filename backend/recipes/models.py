@@ -170,8 +170,6 @@ class ShoppingCart(models.Model):
 class Follow(models.Model):
     """
     Подписки на авторов рецептов.
-    Ограничения уникальности полей:
-      author, user.
     """
     user = models.ForeignKey(
         User,
