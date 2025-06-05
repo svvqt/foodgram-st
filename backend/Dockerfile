@@ -10,7 +10,7 @@ RUN python -m pip install --upgrade pip && pip3 install -r app/requirements.txt 
 
 COPY . /app
 
-COPY ./static/fonts/ /app/static/fonts/
+COPY fonts/ /app/fonts
 
 WORKDIR /app
 

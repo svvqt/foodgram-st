@@ -1,3 +1,5 @@
+### Foodgram - «Продуктовый помощник»
+Foodgram — это онлайн-сервис для публикации рецептов. Пользователи могут создавать свои рецепты, подписываться на других авторов, добавлять рецепты в избранное и в список покупок, а также скачивать сводный список ингредиентов.
 ### Локальный запуск проекта:
 
 **_Склонировать репозиторий к себе_**
@@ -29,9 +31,28 @@ docker-compose up --build
 docker-compose exec backend python manage.py loaddata ingredients_converted
 ```
 
-**_После проект будет доступен по адресу: http://localhost/_**, а backend проекта **_http://localhost:8000/api_**
-
 **_Затем нужно создать суперпользователя._**
 ```
 docker-compose exec backend python manage.py createsuperuser
 ```
+
+**_После проект будет доступен по адресу: http://localhost/_**, а backend проекта **_http://localhost:8000/api_**, админка по адресу **_http://localhost/admin_**
+
+### Пример API-запросов
+**_Регистрация пользователя_**
+
+```
+POST /api/users/
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "username": "user123",
+  "first_name": "Иван",
+  "last_name": "Иванов",
+  "password": "securepassword123"
+}
+```
+
+### Автор
+**_Витковский К.Е._**

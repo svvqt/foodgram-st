@@ -1,32 +1,24 @@
 from rest_framework.response import Response
-from django.http import HttpResponse
-from django.db.models import Sum
 from rest_framework import (
     viewsets, status, permissions
 )
-import io
-from datetime import datetime
-from pathlib import Path
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-from reportlab.platypus import Table, TableStyle
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from django.conf import settings
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from .paginations import StandardResultsSetPagination
-from rest_framework.exceptions import PermissionDenied
-from recipes.models import (Recipe, Ingredient,
-                            Favorite, ShoppingCart, RecipeIngredient)
-from .serializers import (
+from rest_framework.permissions import IsAuthenticated
+from django_filters import rest_framework as filters
+
+from api.filters import RecipeFilter
+from api.serializers import (
     IngredientSerializer, RecipeSerializer,
     RecipeCreateSerializer, FavoriteSerializer,
     ShoppingCartSerializer
 )
 from api.permissions import IsAuthorOrAdminOrReadOnly
+from api.services import shopping_cart_pdf
+from api.paginations import StandardResultsSetPagination
+from recipes.models import (Recipe, Ingredient,
+                            Favorite, ShoppingCart)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -52,230 +44,89 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """
     queryset = Recipe.objects.all()
     pagination_class = StandardResultsSetPagination
-    permission_classes = (IsAuthorOrAdminOrReadOnly,) # Права на редактирование только у автора или админа
+    permission_classes = (IsAuthorOrAdminOrReadOnly,)
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_class = RecipeFilter
 
     def get_serializer_class(self):
-        """Выбор сериализатора в зависимости от действия."""
         if self.action in ('create', 'update', 'partial_update'):
-            return RecipeCreateSerializer # Для создания/обновления используем специальный сериализатор
-        return RecipeSerializer # Для чтения используем основной сериализатор
-
-    def update(self, request, *args, **kwargs):
-        """
-        Обновление рецепта с дополнительной проверкой прав.
-        Только автор или администратор могут изменять рецепт.
-        """
-        try:
-            instance = self.get_object()
-            # Проверка прав на редактирование
-            if instance.author != request.user and not request.user.is_staff:
-                raise PermissionDenied(
-                    {"detail": "У вас нет прав изменять этот рецепт."}
-                )
-            serializer = self.get_serializer(instance, data=request.data, partial=kwargs.pop('partial', False))
-            serializer.is_valid(raise_exception=True)
-            self.perform_update(serializer)
-            return Response(serializer.data)
-        except PermissionDenied:
-            return Response(
-                {"detail": "У вас нет прав изменять этот рецепт."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-    def get_queryset(self):
-        """Фильтрация рецептов по параметрам запроса."""
-        queryset = super().get_queryset()
-        user = self.request.user
-
-        # Фильтрация по избранному
-        is_favorited = self.request.query_params.get('is_favorited')
-        if is_favorited == '1' and user.is_authenticated:
-            queryset = queryset.filter(in_favorites__user=user)
-
-        # Фильтрация по наличию в корзине покупок
-        is_in_shopping_cart = self.request.query_params.get(
-            'is_in_shopping_cart'
-        )
-        if is_in_shopping_cart == '1' and user.is_authenticated:
-            queryset = queryset.filter(in_shopping_carts__user=user)
-
-        # Фильтрация по автору
-        author_id = self.request.query_params.get('author')
-        if author_id:
-            queryset = queryset.filter(author_id=author_id)
-
-        return queryset
+            return RecipeCreateSerializer
+        return RecipeSerializer
 
     @action(
         detail=True,
-        methods=['post', 'delete'],
+        methods=['post'],
         permission_classes=[permissions.IsAuthenticated]
     )
     def favorite(self, request, pk=None):
-        """
-        Добавление/удаление рецепта в избранное.
-        Доступно только аутентифицированным пользователям.
-        """
         recipe = self.get_object()
-        user = request.user
-        favorite_model = Favorite
+        serializer = FavoriteSerializer(
+            data={'recipe': recipe.id},
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        if request.method == 'POST':
-            # Проверяем, не добавлен ли уже рецепт
-            if favorite_model.objects.filter(user=user, recipe=recipe).exists():
-                return Response(
-                    {'detail': 'Этот рецепт уже есть в вашем избранном.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Создаем запись в избранном
-            favorite = favorite_model.objects.create(user=user, recipe=recipe)
-            serializer = FavoriteSerializer(
-                favorite, 
-                context={'request': request}
-            )
+    @favorite.mapping.delete
+    def delete_favorite(self, request, pk=None):
+        recipe = self.get_object()
+        deleted = Favorite.objects.filter(
+            user=request.user,
+            recipe=recipe
+        ).delete()
+        if not deleted[0]:
             return Response(
-                serializer.data, 
-                status=status.HTTP_201_CREATED
+                {'detail': 'Рецепт не был найден в избранном.'},
+                status=status.HTTP_400_BAD_REQUEST
             )
-
-        elif request.method == 'DELETE':
-            # Удаляем рецепт из избранного, если он там есть
-            deleted_count, _ = favorite_model.objects.filter(
-                user=user,
-                recipe=recipe
-            ).delete()
-
-            if deleted_count == 0:
-                return Response(
-                    {'detail': 'Рецепт не был найден в избранном.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            return Response(
-                {'detail': 'Рецепт успешно удален из избранного.'},
-                status=status.HTTP_204_NO_CONTENT
-            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,
-        methods=['post', 'delete'],
+        methods=['post'],
         permission_classes=[permissions.IsAuthenticated]
     )
     def shopping_cart(self, request, pk=None):
-        """
-        Добавление/удаление рецепта в корзину покупок.
-        Доступно только аутентифицированным пользователям.
-        """
+        recipe = self.get_object()
+        serializer = ShoppingCartSerializer(
+            data={},
+            context={
+                'request': request,
+                'recipe': recipe
+            }
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @shopping_cart.mapping.delete
+    def delete_shopping_cart(self, request, pk=None):
         recipe = get_object_or_404(Recipe, pk=pk)
-        user = request.user
-        cart_model = ShoppingCart
-
-        if request.method == 'POST':
-            # Проверяем, есть ли рецепт уже в корзине
-            if cart_model.objects.filter(user=user, recipe=recipe).exists():
-                return Response(
-                    {'message': 'Этот рецепт уже добавлен в вашу корзину.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        
-            # Создаем запись в корзине
-            cart_item = cart_model(user=user, recipe=recipe)
-            cart_item.save()
-        
-            serializer = ShoppingCartSerializer(cart_item, context={'request': request})
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        elif request.method == 'DELETE':
-            # Пытаемся найти и удалить рецепт из корзины
-            cart_item = cart_model.objects.filter(user=user, recipe=recipe).first()
-        
-            if not cart_item:
-                return Response(
-                    {'message': 'Этот рецепт не найден в вашей корзине.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        
-            cart_item.delete()
+        deleted = ShoppingCart.objects.filter(
+            user=request.user,
+            recipe=recipe
+        ).delete()
+        if not deleted[0]:
             return Response(
-                {'message': 'Рецепт успешно удален из корзины.'},
-                status=status.HTTP_204_NO_CONTENT
+                {'message': 'Этот рецепт не найден в вашей корзине.'},
+                status=status.HTTP_400_BAD_REQUEST
             )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=False,
         methods=['get'],
-        permission_classes=[permissions.IsAuthenticated]
+        permission_classes=[IsAuthenticated]
     )
     def download_shopping_cart(self, request):
         """
-        Генерация PDF-файла со списком покупок.
-        Содержит агрегированный список всех ингредиентов из рецептов в корзине.
+        Скачать список покупок для выбранных рецептов в формате PDF,
+        данные суммируются.
         """
-        # Регистрируем шрифты с поддержкой кириллицы
-        font_path = Path(settings.BASE_DIR) / "static/fonts/DejaVuSans.ttf"
-        font_bold_path = Path(settings.BASE_DIR) / "static/fonts/DejaVuSans-Bold.ttf"
-        
-        pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
-        pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', font_bold_path))
-
-        # Получаем ингредиенты
-        ingredients = RecipeIngredient.objects.filter(
-            recipe__in_shopping_carts__user=request.user
-        ).values(
-            'ingredient__name',
-            'ingredient__measurement_unit'
-        ).annotate(total_amount=Sum('amount')).order_by('ingredient__name')
-
-        # Создаем PDF
-        buffer = io.BytesIO()
-        pdf = canvas.Canvas(buffer, pagesize=letter)
-
-        # Заголовок (используем DejaVuSans-Bold)
-        pdf.setFont("DejaVuSans-Bold", 16)
-        pdf.drawCentredString(300, 750, "Ваш список покупок")
-
-        # Имя пользователя (обычный шрифт)
-        pdf.setFont("DejaVuSans", 12)
-        user_name = request.user.get_full_name() or request.user.username
-        pdf.drawString(50, 730, f"Пользователь: {user_name}")
-
-        # Таблица с ингредиентами
-        data = [["Ингредиент", "Количество", "Ед. измерения"]]
-        for item in ingredients:
-            data.append([
-                item['ingredient__name'],
-                str(item['total_amount']),
-                item['ingredient__measurement_unit']
-            ])
-
-        table = Table(data, colWidths=[250, 100, 100])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'DejaVuSans-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTNAME', (0, 1), (-1, -1), 'DejaVuSans'),
-        ]))
-
-        table.wrapOn(pdf, 0, 0)
-        table.drawOn(pdf, 50, 650)
-
-        # Дата создания
-        pdf.setFont("DejaVuSans-Oblique", 10)
-        pdf.drawString(50, 50, f"Создано: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-
-        pdf.showPage()
-        pdf.save()
-
-        buffer.seek(0)
-        response = HttpResponse(buffer, content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="shopping_list.pdf"'
-        return response
+        if ShoppingCart.objects.filter(user=request.user).exists():
+            return shopping_cart_pdf(request)
+        return Response('Список покупок пуст.', status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=['get'], url_path='get-link')
     def get_recipe_link(self, request, pk=None):

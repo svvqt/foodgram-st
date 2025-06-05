@@ -1,12 +1,13 @@
+import json
+import logging
+
 from django.contrib import admin
 from django import forms
 from django.shortcuts import render
 from django.urls import path
 from django.http import HttpResponseRedirect
-import json
-import logging
 
-from .models import (
+from recipes.models import (
     Ingredient, Recipe, RecipeIngredient,
     Favorite, ShoppingCart
 )
