@@ -6,7 +6,10 @@ from rest_framework.fields import CurrentUserDefault
 from djoser.serializers import UserSerializer as DjoserUserSerializer
 from rest_framework import serializers
 
-from recipes.models import Ingredient, Recipe, RecipeIngredient, Favorite, ShoppingCart
+from recipes.models import (
+    Ingredient, Recipe,
+    RecipeIngredient, Favorite, ShoppingCart
+)
 from recipes.models import Follow
 from users.models import User
 
@@ -30,7 +33,7 @@ class CustomUserSerializer(DjoserUserSerializer):
         """Проверяет, подписан ли текущий пользователь на просматриваемого."""
 
         request = self.context.get('request')
-        return (request and request.user.is_authenticated and 
+        return (request and request.user.is_authenticated and
                 request.user.follower.filter(author=obj).exists())
 
 
@@ -54,7 +57,9 @@ class AddIngredientSerializer(serializers.Serializer):
     def validate_id(self, value):
         """Проверяет существование ингредиента."""
         if not Ingredient.objects.filter(id=value).exists():
-            raise serializers.ValidationError('Ингредиент с указанным ID не существует')
+            raise serializers.ValidationError(
+                'Ингредиент с указанным ID не существует'
+                )
         return value
 
 
@@ -79,7 +84,10 @@ class BaseRecipeSerializer(serializers.ModelSerializer):
     """Базовый сериализатор для рецептов."""
 
     author = CustomUserSerializer(read_only=True)
-    ingredients = RecipeIngredientSerializer(source='recipe_ingredients', many=True, read_only=True)
+    ingredients = RecipeIngredientSerializer(
+        source='recipe_ingredients',
+        many=True, read_only=True
+        )
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
@@ -271,7 +279,9 @@ class BaseFollowSerializer(CustomUserSerializer):
         if limit and limit.isdigit():
             recipes = recipes[:int(limit)]
 
-        return RecipeFollowSerializer(recipes, many=True, context={'request': request}).data
+        return RecipeFollowSerializer(recipes,
+                                      many=True,
+                                      context={'request': request}).data
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()

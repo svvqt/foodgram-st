@@ -1,9 +1,9 @@
 import json
 
 # Путь к исходному файлу
-input_path = '../data/ingredients.json'  
+input_path = '../data/ingredients.json'
 # Путь для сохранения преобразованного файла
-output_path = 'recipes/fixtures/ingredients.json'  
+output_path = 'recipes/fixtures/ingredients.json'
 
 # Чтение исходного файла
 with open(input_path, 'r', encoding='utf-8') as f:
