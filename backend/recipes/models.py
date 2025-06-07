@@ -6,12 +6,15 @@ from users.models import User
 from recipes.constants import (
     MAX_INGREDIENT_NAME_LENGTH,
     MAX_MEASUREMENT_UNIT_LENGTH,
-    MAX_RECIPE_NAME_LENGTH
+    MAX_RECIPE_NAME_LENGTH,
+    MIN_COOKING_TIME,
+    MIN_AMOUNT
 )
 
 
 class Ingredient(models.Model):
     """Модель ингредиентов."""
+
     name = models.CharField(
         'Название ингредиента',
         max_length=MAX_INGREDIENT_NAME_LENGTH,
@@ -39,6 +42,7 @@ class Ingredient(models.Model):
 
 class Recipe(models.Model):
     """Модель рецептов."""
+
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -62,7 +66,7 @@ class Recipe(models.Model):
     )
     cooking_time = models.PositiveSmallIntegerField(
         'Время приготовления (минуты)',
-        validators=[MinValueValidator(1)]
+        validators=[MinValueValidator(MIN_COOKING_TIME)]
     )
     pub_date = models.DateTimeField(
         'Дата публикации',
@@ -86,6 +90,7 @@ class Recipe(models.Model):
 
 class RecipeIngredient(models.Model):
     """Промежуточная модель для связи рецептов и ингредиентов."""
+
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
@@ -100,12 +105,13 @@ class RecipeIngredient(models.Model):
     )
     amount = models.PositiveSmallIntegerField(
         'Количество',
-        validators=[MinValueValidator(1)],
+        validators=[MinValueValidator(MIN_AMOUNT)],
     )
 
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецептах'
+        ordering = ['id']
         constraints = [
             UniqueConstraint(
                 fields=['recipe', 'ingredient'],
@@ -119,6 +125,7 @@ class RecipeIngredient(models.Model):
 
 class UserRecipeRelation(models.Model):
     """Абстрактная модель для связи пользователей и рецептов."""
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -134,6 +141,7 @@ class UserRecipeRelation(models.Model):
 
     class Meta:
         abstract = True
+        ordering = ['id']
         constraints = [
             UniqueConstraint(
                 fields=['user', 'recipe'],
@@ -144,7 +152,9 @@ class UserRecipeRelation(models.Model):
 
 class Favorite(UserRecipeRelation):
     """Модель избранных рецептов."""
+
     class Meta(UserRecipeRelation.Meta):
+        ordering = ['id']
         verbose_name = 'Избранный рецепт'
         verbose_name_plural = 'Избранные рецепты'
 
@@ -154,7 +164,9 @@ class Favorite(UserRecipeRelation):
 
 class ShoppingCart(UserRecipeRelation):
     """Модель списка покупок."""
+
     class Meta(UserRecipeRelation.Meta):
+        ordering = ['id']
         verbose_name = 'Рецепт в списке покупок'
         verbose_name_plural = 'Рецепты в списках покупок'
 
@@ -164,6 +176,7 @@ class ShoppingCart(UserRecipeRelation):
 
 class Follow(models.Model):
     """Подписки на авторов рецептов."""
+
     user = models.ForeignKey(
         User,
         verbose_name='Подписчик',
@@ -180,6 +193,7 @@ class Follow(models.Model):
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
+        ordering = ['id']
         constraints = [
             UniqueConstraint(
                 fields=['user', 'author'],

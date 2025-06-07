@@ -1,11 +1,11 @@
-import io
 from datetime import datetime
+import io
 from pathlib import Path
 import logging
 
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
 from reportlab.platypus import Table, TableStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont, TTFError
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 def shopping_cart_pdf(request):
     """Создание PDF со списком продуктов для выбранных рецептов пользователя."""
+
     # Настройка шрифтов
     FONT_DIR = Path(settings.BASE_DIR) / "fonts"
     FONT_PATHS = {

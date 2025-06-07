@@ -9,7 +9,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG', '').lower() == 'true'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost, 127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
@@ -114,7 +114,6 @@ DJOSER = {
     'USER_ID_FIELD': 'id',
     'SERIALIZERS': {
         'user': 'api.serializers.CustomUserSerializer',
-        'user_create': 'api.serializers.UserCreateSerializer',
         'current_user': 'api.serializers.CustomUserSerializer',
     },
     'PERMISSIONS': {

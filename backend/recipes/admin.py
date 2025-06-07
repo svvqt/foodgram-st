@@ -32,9 +32,9 @@ class RecipeAdmin(admin.ModelAdmin):
     search_fields = ('name', 'author__username')
     inlines = (RecipeIngredientInline,)
 
+    @admin.display(description='В избранном')
     def favorites_count(self, obj):
         return obj.in_favorites.count()
-    favorites_count.short_description = 'В избранном'
 
 
 @admin.register(Ingredient)

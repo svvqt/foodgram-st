@@ -2,18 +2,10 @@ from rest_framework import permissions
 
 
 class IsAuthorOrAdminOrReadOnly(permissions.BasePermission):
-    """
-    Разрешает доступ на чтение всем пользователям.
+    """Разрешает доступ на чтение всем пользователям.
+
     Запись разрешена только автору объекта или администратору.
     """
-
-    def has_permission(self, request, view):
-        """Проверяет общие права доступа к представлению."""
-        return (
-            request.method in permissions.SAFE_METHODS
-            or request.user
-            and request.user.is_authenticated
-        )
 
     def has_object_permission(self, request, view, obj):
         """Проверяет права доступа к конкретному объекту."""
@@ -27,19 +19,11 @@ class IsAuthorOrAdminOrReadOnly(permissions.BasePermission):
 
 
 class IsUserOrAdminOrReadOnly(permissions.BasePermission):
-    """
-    Разрешает доступ на чтение всем пользователям.
+    """Разрешает доступ на чтение всем пользователям.
+
     Запись разрешена только самому пользователю или администратору.
     Используется для работы с профилями пользователей.
     """
-
-    def has_permission(self, request, view):
-        """Проверяет общие права доступа к представлению."""
-        return (
-            request.method in permissions.SAFE_METHODS
-            or request.user
-            and request.user.is_authenticated
-        )
 
     def has_object_permission(self, request, view, obj):
         """Проверяет права доступа к конкретному объекту."""
